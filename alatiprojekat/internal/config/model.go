@@ -13,8 +13,7 @@ type Configuration struct {
 }
 
 type ConfigurationGroup struct {
-	ID             string            `json:"id"`
-	Version        string            `json:"version"`
-	Labels         map[string]string `json:"labels"`
-	Configurations []Configuration   `json:"configurations"`
+	ID      string          `json:"id"`
+	Version string          `json:"version"`
+	Configs []Configuration `json:"configs"`
 }

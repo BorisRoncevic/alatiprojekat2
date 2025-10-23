@@ -18,7 +18,7 @@ func NewConfigService() *ConfigService {
 	config := api.DefaultConfig()
 	config.Address = os.Getenv("CONSUL_ADDRESS")
 	if config.Address == "" {
-		config.Address = "127.0.0.1:8500" //adresa Consula
+		config.Address = "127.0.0.1:8500" // adresa Consula
 	}
 
 	client, err := api.NewClient(config)
@@ -51,6 +51,7 @@ func (s *ConfigService) getFromConsul(key string) (*api.KVPair, error) {
 	}
 	return pair, nil
 }
+
 func (s *ConfigService) CreateConfiguration(config Configuration) (Configuration, error) {
 	key := fmt.Sprintf("configs/%s/%s", config.ID, config.Version)
 
@@ -107,7 +108,7 @@ func (s *ConfigService) UpdateConfiguration(config Configuration) error {
 	return nil
 }
 
-//pretrazivanje konfiguracije na osnovu labele u Consulu
+// pretrazivanje konfiguracije na osnovu labele u Consulu
 func (s *ConfigService) SearchConfigurationsByLabels(labelsToSearch map[string]string) ([]Configuration, error) {
 	pairs, _, err := s.consulClient.KV().List("configs/", nil)
 	if err != nil {
@@ -155,7 +156,7 @@ func (s *ConfigService) CreateConfigurationGroup(group ConfigurationGroup) (Conf
 	return group, nil
 }
 
-//preuzima grupu konfiguracija
+// preuzima grupu konfiguracija
 func (s *ConfigService) GetConfigurationGroup(id, version string) (ConfigurationGroup, error) {
 	key := fmt.Sprintf("groups/%s/%s", id, version)
 	pair, err := s.getFromConsul(key)
@@ -209,6 +210,7 @@ func (s *ConfigService) UpdateConfigurationGroup(group ConfigurationGroup) error
 	return nil
 }
 
+// ✅ ISPRAVLJENO: Pretraga grupa po labelama iz Configs, ne iz Labels
 func (s *ConfigService) SearchConfigurationGroupsByLabels(labelsToSearch map[string]string) ([]ConfigurationGroup, error) {
 	pairs, _, err := s.consulClient.KV().List("groups/", nil)
 	if err != nil {
@@ -226,12 +228,19 @@ func (s *ConfigService) SearchConfigurationGroupsByLabels(labelsToSearch map[str
 			continue
 		}
 
-		// pretraga po labelama
-		matches := true
-		for searchKey, searchValue := range labelsToSearch {
-			value, ok := group.Labels[searchKey]
-			if !ok || value != searchValue {
-				matches = false
+		// ✅ Pretraga po labelama unutar Configs (konfiguracija u grupi)
+		matches := false
+		for _, config := range group.Configs {
+			configMatches := true
+			for searchKey, searchValue := range labelsToSearch {
+				value, ok := config.Labels[searchKey]
+				if !ok || value != searchValue {
+					configMatches = false
+					break
+				}
+			}
+			if configMatches {
+				matches = true
 				break
 			}
 		}

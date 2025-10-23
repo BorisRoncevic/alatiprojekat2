@@ -13,7 +13,7 @@ services:
     volumes:
       - consul-data:/consul/data
     healthcheck:
-      test: ["CMD", "consul", "status"]
+      test: ["CMD", "consul", "members"]
       interval: 10s
       timeout: 5s
       retries: 5

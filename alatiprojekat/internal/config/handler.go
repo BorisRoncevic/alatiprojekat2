@@ -1,4 +1,5 @@
-package	config
+package config
+
 import (
 	"encoding/json"
 	"net/http"
@@ -16,7 +17,7 @@ func NewConfigHandler(service *ConfigService) *ConfigHandler {
 	return &ConfigHandler{service: service}
 }
 
-//hendleri za konfiguraciju
+// Hendleri za konfiguraciju
 
 func (h *ConfigHandler) CreateConfigurationHandler(w http.ResponseWriter, r *http.Request) {
 	var config Configuration
@@ -63,7 +64,7 @@ func (h *ConfigHandler) DeleteConfigurationHandler(w http.ResponseWriter, r *htt
 
 	if err := h.service.DeleteConfiguration(id, version); err != nil {
 		if strings.Contains(err.Error(), "nije pronađena") {
-			http.Error(w, err.Error(), http.StatusNotFound) // Vraća 404
+			http.Error(w, err.Error(), http.StatusNotFound)
 			return
 		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -72,7 +73,7 @@ func (h *ConfigHandler) DeleteConfigurationHandler(w http.ResponseWriter, r *htt
 	w.WriteHeader(http.StatusNoContent)
 }
 
-//hendler za pretragu
+// Hendler za pretragu
 func (h *ConfigHandler) SearchConfigurationsHandler(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	labelsToSearch := make(map[string]string)
@@ -97,7 +98,6 @@ func (h *ConfigHandler) SearchConfigurationsHandler(w http.ResponseWriter, r *ht
 	json.NewEncoder(w).Encode(configs)
 }
 
-
 // UpdateConfigurationHandler azuriranje postojece konfiguracije
 func (h *ConfigHandler) UpdateConfigurationHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
@@ -110,7 +110,8 @@ func (h *ConfigHandler) UpdateConfigurationHandler(w http.ResponseWriter, r *htt
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	//provera id
+	
+	// Provera ID
 	if config.ID != id || config.Version != version {
 		http.Error(w, "ID ili verzija u telu zahteva se ne poklapaju sa onima u URL-u", http.StatusBadRequest)
 		return
@@ -118,7 +119,7 @@ func (h *ConfigHandler) UpdateConfigurationHandler(w http.ResponseWriter, r *htt
 
 	if err := h.service.UpdateConfiguration(config); err != nil {
 		if strings.Contains(err.Error(), "nije pronađena") {
-			http.Error(w, err.Error(), http.StatusNotFound) // Vraća 404
+			http.Error(w, err.Error(), http.StatusNotFound)
 			return
 		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -129,14 +130,19 @@ func (h *ConfigHandler) UpdateConfigurationHandler(w http.ResponseWriter, r *htt
 	json.NewEncoder(w).Encode(config)
 }
 
-
+// ✅ ISPRAVLJENO: Ne prepisuje ID sa UUID-om
 func (h *ConfigHandler) CreateConfigurationGroupHandler(w http.ResponseWriter, r *http.Request) {
 	var group ConfigurationGroup
 	if err := json.NewDecoder(r.Body).Decode(&group); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	group.ID = uuid.New().String()
+	
+	// ✅ Generiši UUID samo ako ID nije poslat
+	if group.ID == "" {
+		group.ID = uuid.New().String()
+	}
+	
 	createdGroup, err := h.service.CreateConfigurationGroup(group)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusConflict)
@@ -171,7 +177,6 @@ func (h *ConfigHandler) DeleteConfigurationGroupHandler(w http.ResponseWriter, r
 	w.WriteHeader(http.StatusNoContent)
 }
 
-
 // SearchConfigurationGroupsHandler GET pretraga
 func (h *ConfigHandler) SearchConfigurationGroupsHandler(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
@@ -186,6 +191,15 @@ func (h *ConfigHandler) SearchConfigurationGroupsHandler(w http.ResponseWriter, 
 		http.Error(w, "Niste uneli nijednu labelu za pretragu grupe", http.StatusBadRequest)
 		return
 	}
+
+	groups, err := h.service.SearchConfigurationGroupsByLabels(labelsToSearch)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(groups)
 }
 
 func (h *ConfigHandler) UpdateConfigurationGroupHandler(w http.ResponseWriter, r *http.Request) {
